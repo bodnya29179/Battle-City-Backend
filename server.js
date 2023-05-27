@@ -34,13 +34,30 @@ server.listen(port, () => {
 });
 
 function initializeDevice(socket) {
-  const device = { id: uuidv4() };
+  const device = {
+    id: uuidv4(),
+    isActive: devices.size < 2,
+    playerNumber: devices.size + 1,
+  };
 
   devices.set(socket, device);
   io.emit(nativeEventTypes.message, {
     eventType: sendEventTypes.init,
     message: device,
   });
+
+  if (devices.size === 2) {
+    const sockets = [...devices.keys()];
+
+    sockets.forEach((ws, index) => {
+      const opponentWsIndex = sockets.findIndex((_, idx) => idx !== index);
+
+      sockets[index].emit(nativeEventTypes.message, {
+        eventType: sendEventTypes.opponent,
+        message: [...devices.values()][opponentWsIndex],
+      });
+    });
+  }
 }
 
 function handleMessages(socket, data) {
